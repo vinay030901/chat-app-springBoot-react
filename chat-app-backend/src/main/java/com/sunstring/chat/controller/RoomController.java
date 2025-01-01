@@ -17,15 +17,14 @@ import com.sunstring.chat.exception.RoomAlreadyExistsException;
 import com.sunstring.chat.exception.RoomNotFoundException;
 import com.sunstring.chat.service.RoomService;
 
+import lombok.RequiredArgsConstructor;
+
 @RestController
 @RequestMapping("/api/v1/rooms")
+@RequiredArgsConstructor
 public class RoomController {
 
     private final RoomService roomService;
-
-    public RoomController(RoomService roomService) {
-        this.roomService = roomService;
-    }
 
     // create room
     @PostMapping
