@@ -44,7 +44,7 @@ Now, let's look at the registerStompEndpoints method:
 
 1. @Override: This annotation indicates that this method overrides a method from a superclass.
 2. public void registerStompEndpoints(StompEndpointRegistry registry) { ... }: This method registers STOMP endpoints using the StompEndpointRegistry interface.
-3. registry.addEndpoint("/chat").setAllowedOrigins("Http://localhost:3000").withSockJS();: This line registers a new STOMP endpoint at the /chat URL, allows connections from http://localhost:3000, and enables SockJS support.
+3. registry.addEndpoint("/chat").setAllowedOrigins("Http://localhost:5173").withSockJS();: This line registers a new STOMP endpoint at the /chat URL, allows connections from http://localhost:5173, and enables SockJS support.
 
 In summary, this configuration class enables WebSocket support, configures the message broker, and registers a new STOMP endpoint.
 

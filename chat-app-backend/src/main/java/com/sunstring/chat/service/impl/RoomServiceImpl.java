@@ -28,10 +28,11 @@ public class RoomServiceImpl implements RoomService {
     public Room createRoom(String roomId) throws RoomAlreadyExistsException {
         Optional<Room> optionalRoom = roomRepository.findByRoomId(roomId);
         if (optionalRoom.isPresent()) {
-            logger.info("Room already exists with id: " + optionalRoom.get().getId());
+            logger.info("Room already exists with id: " + optionalRoom.get().getRoomId());
             throw new RoomAlreadyExistsException(roomId + " already exists");
         }
         Room room = new Room();
+        logger.info("Room created with id: " + roomId);
         room.setRoomId(roomId);
         return roomRepository.save(room);
     }

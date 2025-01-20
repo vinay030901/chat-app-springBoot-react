@@ -1,12 +1,24 @@
 import { useState } from "react";
 import chatIcon from "../assets/meetme.png";
 import toast from "react-hot-toast";
+import { createRoomApi, joinChatApi } from "../services/RoomService";
+import useChatContext from "../context/ChatContext";
+import { useNavigate } from "react-router";
 const JoinCreateChat = () => {
   const [details, setDetails] = useState({
     roomId: "",
     userName: "",
   });
 
+  const {
+    roomId,
+    currentUser,
+    connected,
+    setRoomId,
+    setCurrentUser,
+    setConnected,
+  } = useChatContext();
+  const navigate = useNavigate();
   function handleFormInputChange(event) {
     setDetails({
       ...details,
@@ -20,16 +32,45 @@ const JoinCreateChat = () => {
     }
     return true;
   }
-  function joinChat() {
+  async function joinChat() {
     if (validateForm()) {
-      console.log(details);
-      toast.success(JSON.stringify(details));
+      try {
+        const room = await joinChatApi(details.roomId);
+        toast.success("Connected to room");
+        setCurrentUser(details.userName);
+        setConnected(true);
+        setRoomId(room.roomId);
+        navigate("/chat");
+      } catch (error) {
+        if (error.status === 400) toast.error(error.response.data);
+        else toast.error("Error connecting to room");
+        console.error(error);
+      }
+
       // call api to create room on backend
     }
   }
-  function createRoom() {
+  async function createRoom() {
     if (validateForm()) {
       console.log(details);
+      try {
+        const response = await createRoomApi(details.roomId);
+        toast.success("Room created successfully");
+        console.log(response);
+
+        setCurrentUser(details.userName);
+        setRoomId(response.roomId);
+        setConnected(true);
+        console.log("forward to chat page");
+        navigate("/chat");
+      } catch (error) {
+        if (error.status === 400) toast.error("Room id already exists");
+        else {
+          console.log(error);
+
+          toast.error("Failed to create room");
+        }
+      }
     }
   }
   return (

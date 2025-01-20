@@ -32,9 +32,10 @@ public class RoomController {
     @PostMapping
     public ResponseEntity<?> createRoom(@RequestBody String roomId) {
         try {
+            System.out.println("got request to create room with id " + roomId);
             return new ResponseEntity<>(roomService.createRoom(roomId), HttpStatus.CREATED);
         } catch (RoomAlreadyExistsException e) {
-            return ResponseEntity.badRequest().body("Room with this id already exists");
+            return ResponseEntity.badRequest().body("Room already exists");
         }
     }
 
@@ -44,7 +45,7 @@ public class RoomController {
         try {
             return new ResponseEntity<>(roomService.getRoom(roomId), HttpStatus.OK);
         } catch (RoomNotFoundException e) {
-            return ResponseEntity.badRequest().body("Room with this id does not exist");
+            return ResponseEntity.badRequest().body("Room not found");
         }
     }
 
