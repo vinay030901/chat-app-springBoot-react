@@ -52,8 +52,8 @@ public class RoomController {
     // get messages of room
     @GetMapping("/{roomId}/messages")
     public ResponseEntity<List<Message>> getMessages(@PathVariable String roomId,
-            @RequestParam(value = "page", defaultValue = "0", required = false) int page,
-            @RequestParam(value = "size", defaultValue = "20", required = false) int size) {
+            @RequestParam(defaultValue = "0", required = false) int page,
+            @RequestParam(defaultValue = "20", required = false) int size) {
         try {
             return new ResponseEntity<>(roomService.getMessages(roomId, page, size), HttpStatus.OK);
         } catch (RoomNotFoundException e) {
