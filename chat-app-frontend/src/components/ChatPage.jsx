@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import Header from "./Header";
-import MessageContainer from "./MessageContainer";
 import useChatContext from "../context/ChatContext";
 import { useNavigate } from "react-router";
 import SockJS from "sockjs-client";
@@ -8,6 +7,8 @@ import { Stomp } from "@stomp/stompjs";
 import { baseURL } from "../config/AxiosHelper";
 import toast from "react-hot-toast";
 import { MdAttachment, MdCameraAlt, MdSend } from "react-icons/md";
+import { getMessages } from "../services/RoomService";
+import { timeAgo } from "../config/helper";
 
 const ChatPage = () => {
   const { roomId, currentUser, connected } = useChatContext();
@@ -17,16 +18,28 @@ const ChatPage = () => {
     if (!connected) navigate("/");
   }, [roomId, currentUser, connected, navigate]);
 
-  const [messages, setMessages] = useState([
-    { content: "Hello", sender: "Vinay" },
-    { content: "Hi", sender: "Rahul" },
-    { content: "How are you?", sender: "Vinay" },
-    { content: "I am doing good, what about you?", sender: "Rahul" },
-    { content: "Hi all, I am in party mood.", sender: "Mohit" },
-    { content: "Hi all, I am in party mood.", sender: "Mohit" },
-  ]);
+  const [messages, setMessages] = useState([]);
 
   // page init: load the messages
+  useEffect(() => {
+    async function loadMessages() {
+      try {
+        const messages = await getMessages(roomId);
+        setMessages(messages);
+      } catch (error) {
+        console.log(error);
+      }
+    }
+    if (connected) loadMessages();
+  }, [connected, roomId]);
+
+  // scroll down
+  useEffect(() => {
+    const scrollToBottom = () => {
+      chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
+    };
+    scrollToBottom();
+  }, [messages]);
 
   // initialisation of stomp client
   useEffect(() => {
@@ -43,15 +56,16 @@ const ChatPage = () => {
         });
       });
     };
-    connectWebSocket();
-  }, [roomId]);
+    if (connected) connectWebSocket();
+  }, [connected, roomId]);
 
   // send message handle
-  const sendMessage = async (e) => {
-    e.preventDefault();
+  const sendMessage = async () => {
     if (stompClient && connected && input.trim()) {
-      console.log(input);
+      console.log("stomp connected and input: " + JSON.stringify(input));
     }
+    console.log("message: " + JSON.stringify(input));
+
     stompClient.send(
       `/app/sendMessage/${roomId}`,
       {},
@@ -61,14 +75,16 @@ const ChatPage = () => {
   };
 
   const [input, setInput] = useState("");
-  const inputRef = useRef(null);
   const chatBoxRef = useRef(null);
   const [stompClient, setStompClient] = useState("");
 
   return (
     <div>
-      <Header />
-      <main className="py-20 w-2/3 dark:bg-[#1e1c41] mx-auto border h-screen overflow-auto">
+      <Header stompClient={stompClient} />
+      <main
+        ref={chatBoxRef}
+        className="py-20 w-2/3 dark:bg-[#1e1c41] mx-auto border h-screen overflow-auto"
+      >
         <div>
           {messages.map((message, index) => (
             <div
@@ -93,6 +109,9 @@ const ChatPage = () => {
                   <div className="flex flex-col gap-1">
                     <p className="text-sm font-bold">{message.sender}</p>
                     <p>{message.content}</p>
+                    <p className="text-[0.6rem] text-gray-400">
+                      {timeAgo(message.timeStamp)}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -108,6 +127,9 @@ const ChatPage = () => {
               value={input}
               onChange={(e) => {
                 setInput(e.target.value);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") sendMessage();
               }}
               type="text"
               placeholder="Message"

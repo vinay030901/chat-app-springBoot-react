@@ -6,15 +6,18 @@ export const ChatProvider = ({ children }) => {
   const [roomId, setRoomId] = useState("");
   const [currentUser, setCurrentUser] = useState("");
   const [connected, setConnected] = useState(false);
+  const [token, setToken] = useState("");
   return (
     <ChatContext.Provider
       value={{
         roomId,
         currentUser,
         connected,
+        token,
         setRoomId,
         setCurrentUser,
         setConnected,
+        setToken,
       }}
     >
       {children}
@@ -24,6 +27,5 @@ export const ChatProvider = ({ children }) => {
 ChatProvider.propTypes = {
   children: PropTypes.node.isRequired,
 };
-
 const useChatContext = () => useContext(ChatContext);
 export default useChatContext;
