@@ -24,7 +24,7 @@ public class SecurityConfig {
         http.sessionManagement(management -> management.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(
                         Authorize -> Authorize
-                                .requestMatchers("/api/v1/users/**").permitAll()
+                                .requestMatchers("/api/v1/users/**", "/chat/**").permitAll()
                                 .anyRequest().authenticated())
                 .addFilterBefore(new JwtTokenValidator(),
                         UsernamePasswordAuthenticationFilter.class)

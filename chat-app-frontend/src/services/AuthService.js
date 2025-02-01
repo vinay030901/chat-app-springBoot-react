@@ -14,4 +14,5 @@ export const registerApi = async (registerRequest) => {
     registerRequest
   );
   console.log("got response: ", response.data);
+  return response;
 };

@@ -34,6 +34,7 @@ public class ChatServiceImpl implements ChatService {
             Optional<Room> optionalRoom = roomRepository.findByRoomId(messageRequest.getRoomId());
             Message message = Message.builder().content(messageRequest.getContent())
                     .senderId(senderUser.get().getUserId())
+                    .sender(senderUser.get().getUsername())
                     .timeStamp(LocalDateTime.now()).build();
             Room room = optionalRoom.get();
             room.getMessages().add(message);

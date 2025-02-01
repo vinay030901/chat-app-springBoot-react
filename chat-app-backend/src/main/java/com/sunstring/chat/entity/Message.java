@@ -18,12 +18,14 @@ public class Message {
     @Id
     private String messageId;
     private String senderId;
+    private String sender;
     private String content;
     private LocalDateTime timeStamp;
 
-    Message(String senderId, String content) {
+    Message(String senderId, String content, String sender) {
         this.messageId = null; // For MongoDB auto-generated ID
         this.senderId = senderId;
+        this.sender = sender;
         this.content = content;
         this.timeStamp = LocalDateTime.now();
     }

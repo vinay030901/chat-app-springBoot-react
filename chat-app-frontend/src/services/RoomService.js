@@ -1,9 +1,8 @@
 import { httpClient } from "../config/AxiosHelper";
 
-export const createRoomApi = async (roomDetail) => {
-  console.log("sendRoomApi", roomDetail);
-
-  const response = await httpClient.post(`/api/v1/rooms`, roomDetail);
+export const createRoomApi = async (roomId) => {
+  console.log("sendRoomApi", roomId);
+  const response = await httpClient.post(`/api/v1/rooms/${roomId}`);
   console.log("got response: ", response.data);
 
   return response.data;

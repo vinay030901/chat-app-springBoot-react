@@ -10,7 +10,7 @@ function RegisterPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState(null);
-  const { setToken } = useChatContext();
+  const { setToken, setSenderId } = useChatContext();
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -24,10 +24,11 @@ function RegisterPage() {
         email: email,
         password: password,
       });
-      const token = response.data.token;
+      const token = response.data.jwt;
       localStorage.setItem("token", token);
       setToken(token);
-      navigate("/join", { replace: true });
+      setSenderId(response.data.senderId);
+      navigate("/join");
     } catch (error) {
       setError(error.response.data.message);
     }
@@ -97,7 +98,7 @@ function RegisterPage() {
         <p className="text-lg text-white mt-4">
           Already have an account?{" "}
           <button
-            onClick={() => navigate("/login")}
+            onClick={() => navigate("/users/login")}
             className="text-blue-500 hover:text-blue-700"
           >
             Login

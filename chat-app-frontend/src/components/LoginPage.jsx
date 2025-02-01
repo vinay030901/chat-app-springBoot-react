@@ -8,18 +8,21 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
-  const { setToken } = useChatContext();
+  const { setToken, setSenderId } = useChatContext();
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     try {
       const response = await loginApi({ email: email, password: password });
-      const token = response.data.token;
+      const token = response.data.jwt;
       if (token == null) {
         setError(response.data.message);
       }
+      console.log(response.data);
+
       localStorage.setItem("token", token);
-      setToken(response.data.token);
+      setToken(response.data.jwt);
+      setSenderId(response.data.senderId);
       navigate("/join");
     } catch (error) {
       setError(error.response.data.message);
@@ -66,7 +69,7 @@ function LoginPage() {
         <p className="text-lg text-white mt-4">
           Don&apos; have an account?{" "}
           <button
-            onClick={() => navigate("/register")}
+            onClick={() => navigate("/users/register")}
             className="text-blue-500 hover:text-blue-700"
           >
             Register

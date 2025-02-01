@@ -37,7 +37,9 @@ public class UserController {
         Optional<User> user = userService.findUserByEmail(email);
         if (user.isPresent() && passwordEncoder.matches(password, user.get().getPassword())) {
             String token = JwtTokenProvider.generateJwtToken(user.get());
-            return new ResponseEntity<>(AuthResponse.builder().jwt(token).message("Login successful").build(),
+            return new ResponseEntity<>(
+                    AuthResponse.builder().jwt(token).senderId(user.get().getUserId()).message("Login successful")
+                            .build(),
                     HttpStatus.OK);
         } else if (user.isPresent())
             return new ResponseEntity<>(AuthResponse.builder().message("Wrong password").build(),
@@ -55,7 +57,8 @@ public class UserController {
         registerRequest.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
         User savedUser = userService.createUser(registerRequest);
         String token = JwtTokenProvider.generateJwtToken(savedUser);
-        return ResponseEntity.ok(AuthResponse.builder().jwt(token).message("Success").build());
+        return ResponseEntity
+                .ok(AuthResponse.builder().jwt(token).message("Success").senderId(savedUser.getUserId()).build());
     }
 
 }

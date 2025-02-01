@@ -11,11 +11,11 @@ import { getMessages } from "../services/RoomService";
 import { timeAgo } from "../config/helper";
 
 const ChatPage = () => {
-  const { roomId, currentUser, connected } = useChatContext();
+  const { roomId, currentUser, connected, senderId } = useChatContext();
 
   const navigate = useNavigate();
   useEffect(() => {
-    if (!connected) navigate("/");
+    if (!connected) navigate("/join");
   }, [roomId, currentUser, connected, navigate]);
 
   const [messages, setMessages] = useState([]);
@@ -47,14 +47,22 @@ const ChatPage = () => {
       // sock js
       const sock = new SockJS(`${baseURL}/chat`);
       const client = Stomp.over(sock);
-      client.connect({}, () => {
-        setStompClient(client);
-        toast.success("connected");
-        client.subscribe(`/topic/room/${roomId}`, (message) => {
-          const data = JSON.parse(message.body);
-          setMessages((prevMessages) => [...prevMessages, data]);
-        });
-      });
+      client.connect(
+        {
+          Authorization: "Bearer " + localStorage.getItem("token"),
+        },
+        () => {
+          setStompClient(client);
+          client.subscribe(`/topic/room/${roomId}`, (message) => {
+            const data = JSON.parse(message.body);
+            setMessages((prevMessages) => [...prevMessages, data]);
+          });
+        },
+        (error) => {
+          console.log("Error: " + error);
+          toast.error("Error connecting to the server");
+        }
+      );
     };
     if (connected) connectWebSocket();
   }, [connected, roomId]);
@@ -63,15 +71,20 @@ const ChatPage = () => {
   const sendMessage = async () => {
     if (stompClient && connected && input.trim()) {
       console.log("stomp connected and input: " + JSON.stringify(input));
+      stompClient.send(
+        `/app/sendMessage/${roomId}`,
+        {
+          Authorization: "Bearer " + localStorage.getItem("token"),
+          // "content-type": "application/json",
+        },
+        JSON.stringify({
+          content: input,
+          sender: currentUser,
+          roomId: roomId,
+        })
+      );
+      setInput("");
     }
-    console.log("message: " + JSON.stringify(input));
-
-    stompClient.send(
-      `/app/sendMessage/${roomId}`,
-      {},
-      JSON.stringify({ content: input, sender: currentUser, roomId: roomId })
-    );
-    setInput("");
   };
 
   const [input, setInput] = useState("");
@@ -90,12 +103,12 @@ const ChatPage = () => {
             <div
               key={index}
               className={`flex ${
-                message.sender === currentUser ? "justify-end" : "justify-start"
+                message.senderId === senderId ? "justify-end" : "justify-start"
               }`}
             >
               <div
                 className={`m-2 p-2 rounded max-w-sm ${
-                  message.sender === currentUser
+                  message.senderId === senderId
                     ? "bg-[#075E54]"
                     : "bg-[#1A2426]"
                 }`}

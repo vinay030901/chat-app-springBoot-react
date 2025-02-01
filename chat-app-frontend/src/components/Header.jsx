@@ -18,7 +18,7 @@ const Header = ({ stompClient }) => {
     setRoomId("");
     setCurrentUser("");
     setToken(null);
-    navigate("/login");
+    navigate("/users/login");
   }
   return (
     <header className="fixed w-full flex justify-around items-center p-4 bg-gray-200 dark:bg-gray-800 shadow">
