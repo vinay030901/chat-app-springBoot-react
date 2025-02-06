@@ -1,122 +1,153 @@
 package com.sunstring.chat.service.impl;
 
-import java.io.IOException;
-import java.io.StringReader;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-
-import org.springframework.beans.factory.annotation.Autowired;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sunstring.chat.config.BotLibreConstant;
+import com.sunstring.chat.dto.request.BotChatRequest;
+import com.sunstring.chat.dto.response.GetAllBotsResponse;
+import com.sunstring.chat.entity.BotChat;
+import com.sunstring.chat.entity.Message;
+import com.sunstring.chat.repository.BotChatRepository;
+import com.sunstring.chat.repository.MessageRepository;
+import com.sunstring.chat.service.BotService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
-import org.w3c.dom.Document;
-import org.w3c.dom.NamedNodeMap;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import org.xml.sax.InputSource;
-import org.xml.sax.SAXException;
 
-import com.sunstring.chat.config.BotLibreConstant;
-import com.sunstring.chat.entity.Bot;
-import com.sunstring.chat.service.BotService;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class BotServiceImpl implements BotService {
 
-    private static final String ID_ATTRIBUTE = "id";
-    private static final String NAME_ATTRIBUTE = "name";
-    private static final String ALIAS_ATTRIBUTE = "alias";
-    private static final String AVATAR_ELEMENT = "avatar";
-    private static final String DESCRIPTION_ELEMENT = "description";
-    private static final String TAGS_ELEMENT = "tags";
+    private static final Logger LOGGER = LoggerFactory.getLogger(BotServiceImpl.class);
+    private static final String GET_BOTS_URL = "https://www.botlibre.com/rest/json/get-bots";
+    private static final String CHAT_WITH_BOT_URL = "https://www.botlibre.com/rest/json/chat";
 
-    private RestTemplate restTemplate;
+    private final RestTemplate restTemplate;
+    private final BotChatRepository botChatRepository;
+    private final MessageRepository messageRepository;
+    private final ObjectMapper objectMapper;
 
-    public BotServiceImpl(RestTemplate restTemplate) {
+    public BotServiceImpl(RestTemplate restTemplate, BotChatRepository botChatRepository, ObjectMapper objectMapper,
+            MessageRepository messageRepository) {
         this.restTemplate = restTemplate;
+        this.botChatRepository = botChatRepository;
+        this.objectMapper = objectMapper;
+        this.messageRepository = messageRepository;
     }
 
     @Override
-    public List<Bot> getAllBots() {
+    public GetAllBotsResponse getAllBots() {
         try {
-            String url = String.format("https://www.botlibre.com/rest/api/get-bots?user=%s&password=%s",
-                    BotLibreConstant.USER, BotLibreConstant.PASSWORD);
-            String xmlData = String.format("<browse application='%s'></browse>", BotLibreConstant.APPLICATION);
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_XML);
-
-            HttpEntity<String> requestEntity = new HttpEntity<>(xmlData, headers);
-
-            ResponseEntity<String> responseEntity = restTemplate.postForEntity(url, requestEntity, String.class);
-
-            return parseXmlResponse(responseEntity.getBody());
-        } catch (Exception e) {
-            // Handle exception
-            return Collections.emptyList();
+            String url = String.format("%s?user=%s&password=%s", GET_BOTS_URL, BotLibreConstant.USER,
+                    BotLibreConstant.PASSWORD);
+            String json = "{\"@application\":\"" + BotLibreConstant.APPLICATION + "\"}";
+            ResponseEntity<String> responseEntity = sendPostRequestWithRetry(url, json, 3);
+            String responseData = responseEntity.getBody().replaceAll("\\@", "");
+            return objectMapper.readValue(responseData, GetAllBotsResponse.class);
+        } catch (JsonProcessingException e) {
+            LOGGER.error("Error parsing JSON response", e);
         }
+        return null;
     }
 
-    private List<Bot> parseXmlResponse(String xmlResponse)
-            throws ParserConfigurationException, SAXException, IOException {
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder builder = factory.newDocumentBuilder();
+    @Override
+    public List<Message> chatWithBot(BotChatRequest botChatRequest) {
+        try {
+            String url = String.format("%s?user=%s&password=%s", CHAT_WITH_BOT_URL, BotLibreConstant.USER,
+                    BotLibreConstant.PASSWORD);
+            System.out.println("got bot chat request: " + botChatRequest.toString());
+            String json = objectMapper.writeValueAsString(Map.of(
+                    "application", BotLibreConstant.APPLICATION,
+                    "instance", botChatRequest.getBotId(),
+                    "message", botChatRequest.getMessage()));
+            ResponseEntity<String> responseEntity = sendPostRequestWithRetry(url, json, 3);
+            JsonNode jsonNode = objectMapper.readTree(responseEntity.getBody());
+            String responseMessage = jsonNode.get("message").asText();
+            BotChat botChat = getBotChat(botChatRequest);
+            return addChat(botChat, botChatRequest, responseMessage);
+        } catch (JsonProcessingException e) {
+            LOGGER.error("Error parsing JSON response", e);
+        }
+        return null;
+    }
 
-        InputSource is = new InputSource(new StringReader(xmlResponse));
-        Document doc = builder.parse(is);
+    private ResponseEntity<String> sendPostRequest(String url, String json) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> requestEntity = new HttpEntity<>(json, headers);
+        return restTemplate.postForEntity(url, requestEntity, String.class);
+    }
 
-        NodeList instances = doc.getElementsByTagName("instance");
-        List<Bot> bots = new ArrayList<>();
+    private ResponseEntity<String> sendPostRequestWithRetry(String url, String json, int maxRetries) {
+        int retryCount = 0;
+        ResponseEntity<String> response = null;
 
-        for (int i = 0; i < instances.getLength(); i++) {
-            Node instance = instances.item(i);
-            Bot botInstance = new Bot();
-
-            NamedNodeMap attributes = instance.getAttributes();
-            for (int j = 0; j < attributes.getLength(); j++) {
-                Node attribute = attributes.item(j);
-                switch (attribute.getNodeName()) {
-                    case ID_ATTRIBUTE:
-                        botInstance.setId(attribute.getNodeValue());
-                        break;
-                    case NAME_ATTRIBUTE:
-                        botInstance.setName(attribute.getNodeValue());
-                        break;
-                    case ALIAS_ATTRIBUTE:
-                        botInstance.setAlias(attribute.getNodeValue());
-                        break;
-                }
-            }
-
-            NodeList childNodes = instance.getChildNodes();
-            for (int j = 0; j < childNodes.getLength(); j++) {
-                Node childNode = childNodes.item(j);
-                if (childNode.getNodeType() == Node.ELEMENT_NODE) {
-                    switch (childNode.getNodeName()) {
-                        case AVATAR_ELEMENT:
-                            botInstance.setAvatar(childNode.getTextContent());
-                            break;
-                        case DESCRIPTION_ELEMENT:
-                            botInstance.setDescription(childNode.getTextContent());
-                            break;
-                        case TAGS_ELEMENT:
-                            botInstance.setTags(childNode.getTextContent());
-                            break;
+        while (retryCount < maxRetries) {
+            try {
+                response = sendPostRequest(url, json);
+                break;
+            } catch (RestClientException e) {
+                retryCount++;
+                if (retryCount < maxRetries) {
+                    // Wait for a short period before retrying
+                    try {
+                        Thread.sleep(500);
+                    } catch (InterruptedException ex) {
+                        Thread.currentThread().interrupt();
                     }
+                } else {
+                    LOGGER.error("Error communicating with BotLibre API after {} retries", maxRetries, e);
                 }
             }
-
-            bots.add(botInstance);
         }
 
-        return bots;
+        return response;
+    }
+
+    private BotChat getBotChat(BotChatRequest botChatRequest) {
+        Optional<BotChat> optionalBotChat = botChatRepository.findByUserIdAndBotId(botChatRequest.getUserId(),
+                botChatRequest.getBotId());
+
+        if (optionalBotChat.isPresent())
+            return optionalBotChat.get();
+        return new BotChat(botChatRequest.getUserId(), botChatRequest.getBotId(), new ArrayList<>());
+    }
+
+    private List<Message> addChat(BotChat botChat, BotChatRequest botChatRequest, String responseMessage) {
+        Message messageFromSender = new Message(botChatRequest.getUserId(), botChatRequest.getMessage(),
+                botChatRequest.getUserName());
+        Message messageFromBot = new Message(botChat.getBotId(), responseMessage, "bot");
+        messageRepository.save(messageFromSender);
+        messageRepository.save(messageFromBot);
+        List<Message> listedMessages;
+        if (botChat.getMessages() != null && botChat.getMessages().size() > 0)
+            listedMessages = botChat.getMessages();
+        else
+            listedMessages = new ArrayList<>();
+        listedMessages.add(messageFromSender);
+        listedMessages.add(messageFromBot);
+        botChat.setMessages(listedMessages);
+        System.out.println("saving bot chat: " + botChat.toString());
+        botChatRepository.save(botChat);
+        return listedMessages;
+    }
+
+    @Override
+    public List<Message> loadMessages(String botId, String userId) {
+        Optional<BotChat> botChat = botChatRepository.findByUserIdAndBotId(userId, botId);
+        if (botChat.isPresent())
+            return botChat.get().getMessages();
+        return new ArrayList<>();
     }
 }

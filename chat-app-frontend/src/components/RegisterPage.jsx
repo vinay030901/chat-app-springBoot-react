@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { registerApi } from "../services/AuthService";
 import useChatContext from "../context/ChatContext";
+import useBotContext from "../context/BotContext";
 
 function RegisterPage() {
   const navigate = useNavigate();
@@ -11,6 +12,7 @@ function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState(null);
   const { setToken, setSenderId } = useChatContext();
+  const { setUserName } = useBotContext();
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -28,6 +30,7 @@ function RegisterPage() {
       localStorage.setItem("token", token);
       setToken(token);
       setSenderId(response.data.senderId);
+      setUserName(response.data.userName);
       navigate("/join");
     } catch (error) {
       setError(error.response.data.message);
@@ -53,7 +56,7 @@ function RegisterPage() {
           </div>
           <div className="mb-4">
             <label className="text-lg text-white" htmlFor="username">
-              Email
+              textEmail
             </label>
             <input
               type="text"

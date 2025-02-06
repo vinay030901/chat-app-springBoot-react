@@ -5,6 +5,7 @@ import RegisterPage from "../components/RegisterPage";
 import LoginPage from "../components/LoginPage";
 import JoinChoosePage from "../components/JoinChoosePage";
 import BotList from "../components/BotList";
+import BotChatPage from "../components/BotChatPage";
 
 const AppRoutes = () => {
   return (
@@ -14,7 +15,7 @@ const AppRoutes = () => {
       <Route path="/join" element={<JoinChoosePage />} />
       <Route path="/users/register" element={<RegisterPage />} />
       <Route path="/users/login" element={<LoginPage />} />
-
+      <Route path="/chat/:botId" element={<BotChatPage />} />
       <Route path="/chat" element={<ChatPage />} />
       <Route path="*" element={<h1>Not Found</h1>} />
     </Routes>

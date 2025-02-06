@@ -1,47 +1,43 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import { getAllBots } from "../services/BotService";
+import { useNavigate } from "react-router";
+import useChatContext from "../context/ChatContext";
+import useBotContext from "../context/BotContext";
 
 function BotList() {
   const [bots, setBots] = useState([]);
-  const [showMore, setShowMore] = useState({});
-
+  const [popupBot, setPopupBot] = useState(null);
+  const navigate = useNavigate();
+  const { setConnected } = useChatContext();
+  const { setBotName, setBotAvatar, setBotId, userName } = useBotContext();
   useEffect(() => {
-    const xmlData = '<browse application="8909803789232193318"></browse>';
-    const headers = {
-      "Content-Type": "application/xml",
-      "Content-Length": xmlData.length,
-      Host: "www.botlibre.com",
+    const fetchBots = async () => {
+      try {
+        const botsData = await getAllBots();
+        setBots(botsData);
+      } catch (err) {
+        console.error(err);
+      }
     };
 
-    axios
-      .post("https://www.botlibre.com/rest/api/get-bots", xmlData, { headers })
-      .then((response) => {
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(response.data, "text/xml");
-        const instances = xmlDoc.getElementsByTagName("instance");
-        const botList = [];
-        for (let i = 0; i < instances.length; i++) {
-          const instance = instances[i];
-          const bot = {
-            id: instance.getAttribute("id"),
-            name: instance.getAttribute("name"),
-            alias: instance.getAttribute("alias"),
-            avatar: instance.getElementsByTagName("avatar")[0].textContent,
-            description:
-              instance.getElementsByTagName("description")[0].textContent,
-            tags: instance.getElementsByTagName("tags")[0].textContent,
-          };
-          botList.push(bot);
-        }
-        setBots(botList);
-      })
-      .catch((error) => {
-        console.error(error);
-      });
+    fetchBots();
   }, []);
 
-  const handleShowMore = (id) => {
-    setShowMore((prevState) => ({ ...prevState, [id]: !prevState[id] }));
+  const handleToggleExpansion = (bot) => {
+    setPopupBot(bot);
+  };
+
+  const handleClosePopup = () => {
+    setPopupBot(null);
+  };
+
+  const handleStartChat = (bot) => {
+    // set bot image
+    setBotAvatar(bot.avatar);
+    setConnected(true);
+    setBotId(bot.id);
+    setBotName(bot.name);
+    navigate(`/chat/${bot.id}`);
   };
 
   return (
@@ -55,22 +51,48 @@ function BotList() {
               className="w-full h-48 object-cover rounded-lg"
             />
             <h2 className="text-lg font-bold mb-2">{bot.name}</h2>
-            <p className="text-gray-600 mb-4">{bot.alias}</p>
+            <p className="text-gray-600 mb-4">{bot.tags}</p>
             <button
-              onClick={() => handleShowMore(bot.id)}
-              className="text-blue-500 hover:text-blue-700 mb-4"
+              onClick={() => handleToggleExpansion(bot)}
+              className="text-blue-500 hover:text-blue-700 mb-4 mr-24 md:mr-0"
             >
-              {showMore[bot.id] ? "Show Less" : "Show More"}
+              Show More
             </button>
-            {showMore[bot.id] && (
-              <div>
-                <p className="text-gray-600 mb-2">{bot.description}</p>
-                <p className="text-gray-600 mb-4">Tags: {bot.tags}</p>
-              </div>
-            )}
+            <button
+              onClick={() => handleStartChat(bot)}
+              className="text-blue-500 hover:text-blue-700 md:ml-4"
+            >
+              Start Chat
+            </button>
           </div>
         </div>
       ))}
+      {popupBot && (
+        <div className="fixed top-0 left-0 w-full h-full bg-gray-800 bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white shadow-md rounded p-4 w-1/2">
+            <h2 className="text-lg font-bold mb-2">{popupBot.name}</h2>
+            <p className="text-gray-600 mb-2">{popupBot.description}</p>
+            <p className="text-gray-600 mb-2">
+              <strong>Creator:</strong> {popupBot.creator}
+            </p>
+            <p className="text-gray-600 mb-2">
+              <strong>Creation Date:</strong> {popupBot.creationDate}
+            </p>
+            <p className="text-gray-600 mb-2">
+              <strong>Connects:</strong> {popupBot.connects}
+            </p>
+            <p className="text-gray-600 mb-2">
+              <strong>Stars:</strong> {popupBot.stars}
+            </p>
+            <button
+              onClick={handleClosePopup}
+              className="text-blue-500 hover:text-blue-700"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

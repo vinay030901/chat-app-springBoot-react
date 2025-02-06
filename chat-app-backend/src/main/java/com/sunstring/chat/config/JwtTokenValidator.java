@@ -55,7 +55,6 @@ public class JwtTokenValidator extends OncePerRequestFilter {
     }
 
     public static String getUsernameFromToken(String token) {
-        System.out.println("recieved token: " + token);
         SecretKey secretKey = Keys.hmacShaKeyFor(JwtConstant.SECRET_KEY.getBytes());
         Jws<Claims> claims = Jwts.parserBuilder().setSigningKey(secretKey).build().parseClaimsJws(token);
         return claims.getBody().getSubject();

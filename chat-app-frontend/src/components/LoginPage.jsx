@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { loginApi } from "../services/AuthService";
 import useChatContext from "../context/ChatContext";
+import useBotContext from "../context/BotContext";
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -9,6 +10,7 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
   const { setToken, setSenderId } = useChatContext();
+  const { setUserName } = useBotContext();
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -18,13 +20,17 @@ function LoginPage() {
       if (token == null) {
         setError(response.data.message);
       }
-      console.log(response.data);
 
       localStorage.setItem("token", token);
       setToken(response.data.jwt);
       setSenderId(response.data.senderId);
+      setUserName(response.data.userName);
+      console.log(response.data);
+
       navigate("/join");
     } catch (error) {
+      console.log(error);
+
       setError(error.response.data.message);
     }
   };

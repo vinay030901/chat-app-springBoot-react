@@ -1,7 +1,10 @@
 import { useNavigate } from "react-router";
-import useChatContext from "../context/ChatContext";
+import PropTypes from "prop-types";
 
-const Header = ({ stompClient }) => {
+import useChatContext from "../context/ChatContext";
+import useBotContext from "../context/BotContext";
+
+const Header = ({ stompClient, chat }) => {
   const {
     roomId,
     currentUser,
@@ -10,27 +13,28 @@ const Header = ({ stompClient }) => {
     setCurrentUser,
     setToken,
   } = useChatContext();
+  const { botName, userName } = useBotContext();
   const navigate = useNavigate();
 
   function handleLogout() {
-    stompClient.disconnect();
+    if (stompClient) stompClient.disconnect();
     setConnected(false);
     setRoomId("");
     setCurrentUser("");
     setToken(null);
-    navigate("/users/login");
+    navigate("/join");
   }
   return (
     <header className="fixed w-full flex justify-around items-center p-4 bg-gray-200 dark:bg-gray-800 shadow">
       <div>
         <h1 className="text-xl font-semibold">
-          Room: <span>{roomId}</span>
+          Room: <span>{`${chat === "botChat" ? botName : roomId}`}</span>
         </h1>
       </div>
       {/* chat messages  */}
       <div>
         <h1 className="text-xl font-semibold">
-          User: <span>{currentUser}</span>
+          User: <span>{`${chat === "botChat" ? userName : currentUser}`}</span>
         </h1>
       </div>
       {/* button to leave room  */}
@@ -44,6 +48,11 @@ const Header = ({ stompClient }) => {
       </div>
     </header>
   );
+};
+
+Header.propTypes = {
+  stompClient: PropTypes.object,
+  chat: PropTypes.string,
 };
 
 export default Header;
